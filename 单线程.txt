@@ -1,0 +1,128 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+#include<math.h>
+
+#pragma warning(disable:4996)
+
+#define MAX_Ver 10000
+#define INF 0x3f3f3f3f
+#define TRUE 1
+#define FALSE 0
+#define newstate 0		//未访问状态
+#define nowstate 1		//正在访问状态
+#define okstate 2		//已经访问过并且有环状态
+#define nostate -1		//出度或入度任一为0的，和已经遍历过一次结束过的绝对无环点
+
+int crnum = 0;
+typedef int Boole;	 //布尔类型 存储TRUE FALSE
+
+typedef struct {
+	int id;
+	Boole isvisit;
+	int out;
+	int in;
+	struct HashNode *next;
+}HashNode;
+
+typedef struct {
+	int size;			//预测的总结点数
+	HashNode **table;
+}HashMap;
+
+//初始化
+HashMap *CreateHashMap(int size) {
+	HashMap *map = (HashMap*)malloc(sizeof(HashMap));
+	map->size = size;
+	map->table = (HashNode **)malloc(sizeof(HashNode*)*map->size);
+	for (int j = 0; j < map->size; j++) {
+		map->table[j] = (HashNode *)malloc(sizeof(HashNode)*map->size);
+		map->table[j]->id = -1;
+		map->table[j]->out = 0;
+		map->table[j]->in = 0;
+		map->table[j]->isvisit = FALSE;
+		map->table[j]->next = NULL;
+	}
+	return map;
+}
+
+//hash散列值获取
+int hashval(HashMap *map, int key) {
+	int pos = key % map->size;
+	while (map->table[pos]->id != -1 && map->table[pos]->id != key) pos = (pos + 1) % map->size;
+	return pos;
+}
+
+//数据插入
+void Put(HashMap *map, int *a) {
+	//转出账户插入
+	int pos = hashval(map, a[0]);
+	HashNode *lnode = (HashNode*)malloc(sizeof(HashNode)), *hashnode;
+	lnode->id = a[1];
+	lnode->next = NULL;
+
+	if (map->table[pos]->id != -1) {
+		hashnode = map->table[pos]->next;
+
+		while (hashnode->next != NULL) hashnode = hashnode->next;
+		hashnode->next = lnode;
+	}
+	else {
+		map->table[pos]->id = a[0];
+		map->table[pos]->next = lnode;
+	}
+	map->table[pos]->out++;
+
+	//转入账户插入
+	pos = hashval(map, a[1]);
+	if (map->table[pos]->id == -1)map->table[pos]->id = a[1];
+	map->table[pos]->in++;
+}
+
+/*邻接表的深度优先递归*/
+void DFS(HashMap *G, int i, int lastweight)
+{
+	HashNode *p;
+	int pos = hashval(G, i);
+	visited[i] = TRUE;         		//访问过了该顶点，标记为TRUE 
+	p = G->table[i];	    //让p指向边表第一个结点 
+
+	while (p)                      //在边表内遍历 
+	{
+		if (!p->isvisit) {    //对未访问的邻接顶点递归调用 
+			rc[p->adjvex] = lastweight + 1;
+			DFS(G, p->adjvex, rc[p->adjvex]);
+		}
+		p = p->next;
+	}
+}
+
+//邻接表的深度遍历操作
+void DFSTraverse(HashMap *G)
+{
+	for (int i = 0; i < G->numVertexes; i++) {
+		if (!visited[i]) {
+			rc[i] = 0;
+			DFS(G, i, rc[i]);
+		}
+	}
+}
+
+int main()
+{
+	HashMap *hashmap = CreateHashMap(MAX_Ver);
+
+	//文件读取
+	int a[2];
+	int i = 0;
+	int b;
+	FILE *fp = fopen("C://Users//tengyue//Desktop//comp//test_data.txt", "r");
+	while (!feof(fp))
+	{
+		fscanf(fp, "%d,%d,%d", &a[0], &a[1], &b);
+		Put(hashmap, a);
+	}
+	fclose(fp);
+
+	return 0;
+}
